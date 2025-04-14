@@ -55,7 +55,9 @@ async function getBalanceLogic(clients: { publicClient: PublicClient, account: L
     try {
         const balance = await clients.publicClient.getBalance({ address: targetAddress });
         const formattedBalance = formatEther(balance);
-        return { balance: formattedBalance };
+        // Get the native currency symbol from the chain config
+        const nativeSymbol = clients.publicClient.chain?.nativeCurrency.symbol ?? 'Unknown';
+        return { balance: formattedBalance, symbol: nativeSymbol }; // Return symbol along with balance
     } catch (error: any) {
         throw new Error(`Failed to get balance: ${error.message}`);
     }
@@ -363,6 +365,7 @@ const getBalanceTool: CustomToolDefinition = {
     }),
     returnValue: z.object({
         balance: z.string().describe("The native token balance (in human-readable format, e.g., '1.23')."),
+        symbol: z.string().describe("The symbol of the native token (e.g., 'ETH').")
     }),
 };
 
