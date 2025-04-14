@@ -87,19 +87,23 @@ async function signMessageLogic(clients: { walletClient: WalletClient, account: 
  * Logic to send native tokens (e.g., ETH) from the connected account to a recipient.
  * @param clients Object containing the wallet client and account.
  * @param params Parameters object containing the recipient address and value to send.
- * @returns An object containing the transaction hash.
+ * @returns An object containing the transaction hash and explorer URL.
  * @throws If sending the transaction fails.
  */
 async function sendNativeTokenLogic(clients: { walletClient: WalletClient, account: LocalAccount<string> }, { to, value }: { to: string; value: string }) {
     try {
+        const chain = clients.walletClient.chain; // Get chain info
          // Pass account explicitly
         const hash = await clients.walletClient.sendTransaction({
             account: clients.account,
             to: to as Address,
             value: parseEther(value),
-            chain: clients.walletClient.chain // Explicitly pass chain
+            chain: chain // Explicitly pass chain
         });
-        return { transactionHash: hash };
+        // Construct explorer URL
+        const explorerUrlBase = chain?.blockExplorers?.default?.url;
+        const explorerUrl = explorerUrlBase ? `${explorerUrlBase}/tx/${hash}` : undefined;
+        return { transactionHash: hash, explorerUrl: explorerUrl };
     } catch (error: any) {
         console.error(`Failed to send ETH:`, error, { to, value });
         throw new Error(`Failed to send ETH: ${error.message}`);
@@ -140,7 +144,7 @@ async function getTokenBalanceLogic(clients: { publicClient: PublicClient, accou
  * Logic to transfer a specified amount of an ERC20 token to a recipient.
  * @param clients Object containing the wallet client and account.
  * @param params Parameters object containing token address, recipient address, amount, and optional decimals.
- * @returns An object containing the transaction hash.
+ * @returns An object containing the transaction hash and explorer URL.
  * @throws If the token transfer fails.
  */
 async function transferTokenLogic(clients: { walletClient: WalletClient, account: LocalAccount<string> }, { tokenAddress, to, amount, decimals }: { tokenAddress: string; to: string; amount: string, decimals?: number }) {
@@ -148,16 +152,20 @@ async function transferTokenLogic(clients: { walletClient: WalletClient, account
     const targetTokenAddress = tokenAddress as Address;
     const effectiveDecimals = decimals ?? 6;
     try {
+        const chain = clients.walletClient.chain; // Get chain info
         // Pass account and chain explicitly
         const hash = await clients.walletClient.writeContract({
             account: clients.account,
-            chain: clients.walletClient.chain,
+            chain: chain,
             address: targetTokenAddress,
             abi: ERC20_ABI,
             functionName: 'transfer',
             args: [to as Address, parseUnits(amount, effectiveDecimals)],
         });
-        return { transactionHash: hash };
+         // Construct explorer URL
+         const explorerUrlBase = chain?.blockExplorers?.default?.url;
+         const explorerUrl = explorerUrlBase ? `${explorerUrlBase}/tx/${hash}` : undefined;
+        return { transactionHash: hash, explorerUrl: explorerUrl };
     } catch (error: any) {
         console.error({ err: error, tokenAddress: targetTokenAddress, to, amount }, `Failed to transfer ERC20 token`);
         throw new Error(`Failed to transfer ERC20 token: ${error.message}`);
@@ -389,6 +397,7 @@ const sendNativeTokenTool: CustomToolDefinition = {
     }),
     returnValue: z.object({
         transactionHash: z.string().describe("The hash of the submitted transaction."),
+        explorerUrl: z.string().url().optional().describe("URL to view the transaction on the blockchain explorer."),
     }),
 };
 
@@ -416,6 +425,7 @@ const transferTokenTool: CustomToolDefinition = {
     }),
     returnValue: z.object({
         transactionHash: z.string().describe("The hash of the submitted transaction."),
+        explorerUrl: z.string().url().optional().describe("URL to view the transaction on the blockchain explorer."),
     }),
 };
 
