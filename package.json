@@ -1,6 +1,6 @@
 {
     "name": "@sinco-lab/evm-mcp-server",
-    "version": "0.0.0",
+    "version": "0.0.1",
     "type": "module",
     "description": "An EVM interaction service gateway based on Model Context Protocol (MCP) and Viem, enabling AI agents or services to securely interact with EVM-compatible blockchains.",
     "private": false,
